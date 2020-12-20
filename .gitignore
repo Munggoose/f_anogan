@@ -1,0 +1,4 @@
+.vscode
+dataset/**
+runs/Gan_training/**
+MNIST/
