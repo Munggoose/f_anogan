@@ -16,7 +16,8 @@ import random
 import os
 
 #custom import
-from dataloader.mnist_loader import Mnist_loader
+# from dataloader.mnist_loader import Mnist_loader
+from dataloaders.casting_loader import Castingloader
 from model import f_anogan_dcgan as de
 from utils import utils
 
@@ -25,43 +26,55 @@ np.random.seed(0)
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.determinstic = False
 
+
+#set hyper parameter
 writer = SummaryWriter(logdir='runs/Gan_training')
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-n_epochs = 200
-batch_size = 64
+n_epochs = 300
+batch_size = 5
 lr = 0.0002
-ndf = 28
-ngf = 28
+save_interval = 5
+ndf = 300
+ngf = 300
 latent_dim = 100
-img_size = 28
-channels = 1
+img_size = 300
+channels = 3
 n_critic = 5
-sample_interval = 400
+# sample_interval = 400
 training_label = 0
 split_rate = 0.8
 lambda_gp = 10
-
+n_classes = 1
 weight_path = 'C:\\Users\LMH\Desktop\personal\\f-AnoGan_mun\\runs'
 
-train_dataset = MNIST('./', train=True, download=True)
 
-_x_train = train_dataset.data[train_dataset.targets == 1]
-x_train, x_test_normal = _x_train.split((int(len(_x_train) * split_rate)), dim=0)
+#load dataloader
+# train_dataset = MNIST('./', train=True, download=True)
 
-_y_train = train_dataset.targets[train_dataset.targets == 1]
-y_train, y_test_normal = _y_train.split((int(len(_y_train) * split_rate)), dim=0)
+# _x_train = train_dataset.data[train_dataset.targets == 1]
+# x_train, x_test_normal = _x_train.split((int(len(_x_train) * split_rate)), dim=0)
 
-train_mnist = Mnist_loader(x_train, y_train,
-                                transform=transforms.Compose(
-                                    [transforms.ToPILImage(),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize([0.5], [0.5])])
-                                )
+# _y_train = train_dataset.targets[train_dataset.targets == 1]
+# y_train, y_test_normal = _y_train.split((int(len(_y_train) * split_rate)), dim=0)
 
-train_dataloader = DataLoader(train_mnist, batch_size=batch_size, shuffle=True)
+# train_mnist = Mnist_loader(x_train, y_train,
+#                                 transform=transforms.Compose(
+#                                     [transforms.ToPILImage(),
+#                                     transforms.ToTensor(),
+#                                     transforms.Normalize([0.5], [0.5])])
+#                                 )
+
+composed_transforms_tr = transforms.Compose([
+    transforms.ToTensor()])
+
+train_casting = Castingloader(split='train',
+                                    transforms=composed_transforms_tr,
+                                    n_classes = 1)
+
+train_dataloader = DataLoader(train_casting, batch_size=batch_size, shuffle=True)
 
 
+#setting net
 G = de.Generator(latent_dim=latent_dim,ngf= ngf, channels= channels, bias= True).cuda()
 D = de.Discriminator(ndf= ndf, channels = channels, bias=True).cuda()
 E = de.Encoder(latent_dim=latent_dim, ndf= ndf, channels= channels, bias= True).cuda()
@@ -78,11 +91,15 @@ padding_i = len(str(len(train_dataloader))) # 2
 
 min_loss = 9999999
 min_d_loss = 999999
+min_g_loss = 999999
 
+G.train()
+D.train()
+E.train()
 
 for epoch in range(n_epochs):
-    for i,(imgs,_) in enumerate(train_dataloader):
-        real_imgs = imgs.cuda()
+    for i,sample in enumerate(train_dataloader):
+        real_imgs = sample['image'].cuda()
 
 
         #train discriminator
@@ -98,11 +115,12 @@ for epoch in range(n_epochs):
         #adversarial loss
         d_loss_real = criterion(real_validity, torch.ones_like(real_validity).cuda())
         d_loss_fake = criterion(fake_validity, torch.zeros_like(fake_validity).cuda())
-        d_loss = d_loss_real +d_loss_fake
+        d_loss = d_loss_real + d_loss_fake
         if d_loss < min_d_loss:
             min_d_loss = d_loss
-            d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}')
-            torch.save(D,d_save_path)
+            d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
+            torch.save(D.state_dict(),d_save_path)
+            
 
         d_loss.backward()
         optimizer_D.step()
@@ -114,10 +132,10 @@ for epoch in range(n_epochs):
             
             g_loss = criterion(fake_validity,torch.ones_like(fake_validity).cuda())
             
-            # if g_loss < min_loss:
-            #     min_loss = g_loss
-            g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
-            torch.save(G,os.path.join(g_save_path))
+            if g_loss < min_g_loss:
+                min_g_loss = g_loss
+                g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
+                torch.save(G.state_dict(),g_save_path)
 
             g_loss.backward()
             optimizer_G.step()
@@ -130,6 +148,11 @@ for epoch in range(n_epochs):
                 f"[D loss: {d_loss.item():3f}] "
                 f"[G loss: {g_loss.item():3f}]")
 
+    if epoch & save_interval == 0:
+        d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
+        torch.save(D.state_dict(),d_save_path)
+        g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
+        torch.save(G.state_dict(),g_save_path)
 
 
 #izi
@@ -138,7 +161,8 @@ fake_imgs = G(z) # 64,1,28,28
 fake_z = E(fake_imgs)
 reconf_imgs = G(fake_z)
 # utils.imshow_grid(reconf_imgs)
-
+# G.load_state_dict(torch.load('./runs/Generator/G_epoch-970-loss10.976100.pth'))
+# D.load_state_dict(torch.load('./runs/Discriminator/D_epoch-1010-0.000004.pth'))
 
 G.eval()
 D.eval()
@@ -154,8 +178,8 @@ e_losses = []
 
 min_loss = 999999
 for epoch in range(n_epochs):
-    for i, (imgs,_) in enumerate(train_dataloader):
-        real_imgs = imgs.cuda()
+    for i, sample in enumerate(train_dataloader):
+        real_imgs = sample['image'].cuda()
         
         optimizer_E.zero_grad()
         z = E(real_imgs)
@@ -170,7 +194,7 @@ for epoch in range(n_epochs):
         if e_loss < min_loss:
                 min_loss = e_loss
                 encoder_path=os.path.join(weight_path,'Autoencoder',f'E_epoch-{epoch}.pth')
-                torch.save(E,encoder_path)   
+                torch.save(E.state_dict(),encoder_path)   
         
         e_loss.backward()
         optimizer_E.step()
@@ -180,5 +204,7 @@ for epoch in range(n_epochs):
             print(f"[Epoch {epoch:{padding_epoch}}/{n_epochs}] "
                     f"[Batch {i:{padding_i}}/{len(train_dataloader)}] "
                     f"[E loss: {e_loss.item():3f}]")
+    encoder_path=os.path.join(weight_path,'Autoencoder',f'E_epoch-{epoch}.pth')
+    torch.save(E,encoder_path) 
 
 print('train_finish~~~~')
