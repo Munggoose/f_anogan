@@ -1,4 +1,4 @@
 .vscode
-dataset/**
-runs/Gan_training/**
+dataset/*
+runs/Gan_training/**/*.pth
 MNIST/
