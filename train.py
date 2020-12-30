@@ -69,7 +69,7 @@ composed_transforms_tr = transforms.Compose([
 
 train_casting = Castingloader(split='train',
                                     transforms=composed_transforms_tr,
-                                    n_classes = 1)
+                                    )
 
 train_dataloader = DataLoader(train_casting, batch_size=batch_size, shuffle=True)
 
@@ -93,76 +93,78 @@ min_loss = 9999999
 min_d_loss = 999999
 min_g_loss = 999999
 
-G.train()
-D.train()
-E.train()
+# train Generator & Dicirminator
+# G.train()
+# D.train()
+# E.train()
 
-for epoch in range(n_epochs):
-    for i,sample in enumerate(train_dataloader):
-        real_imgs = sample['image'].cuda()
+# for epoch in range(n_epochs):
+#     for i,sample in enumerate(train_dataloader):
+#         real_imgs = sample['image'].cuda()
 
 
-        #train discriminator
+#         #train discriminator
 
-        optimizer_D.zero_grad()
-        z = torch.randn(batch_size, latent_dim, 1,1).cuda()
+#         optimizer_D.zero_grad()
+#         z = torch.randn(batch_size, latent_dim, 1,1).cuda()
 
-        fake_img = G(z).cuda()
+#         fake_img = G(z).cuda()
 
-        real_validity = D(real_imgs)
-        fake_validity = D(fake_img)
+#         real_validity = D(real_imgs)
+#         fake_validity = D(fake_img)
 
-        #adversarial loss
-        d_loss_real = criterion(real_validity, torch.ones_like(real_validity).cuda())
-        d_loss_fake = criterion(fake_validity, torch.zeros_like(fake_validity).cuda())
-        d_loss = d_loss_real + d_loss_fake
-        if d_loss < min_d_loss:
-            min_d_loss = d_loss
-            d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
-            torch.save(D.state_dict(),d_save_path)
+#         #adversarial loss
+#         d_loss_real = criterion(real_validity, torch.ones_like(real_validity).cuda())
+#         d_loss_fake = criterion(fake_validity, torch.zeros_like(fake_validity).cuda())
+#         d_loss = d_loss_real + d_loss_fake
+#         if d_loss < min_d_loss:
+#             min_d_loss = d_loss
+#             d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
+#             torch.save(D.state_dict(),d_save_path)
             
 
-        d_loss.backward()
-        optimizer_D.step()
-        if i % n_critic == 0 :
-            #train generator
-            optimizer_G.zero_grad()
-            fake_imgs = G(z)
-            fake_validity = D(fake_imgs)
+#         d_loss.backward()
+#         optimizer_D.step()
+#         if i % n_critic == 0 :
+#             #train generator
+#             optimizer_G.zero_grad()
+#             fake_imgs = G(z)
+#             fake_validity = D(fake_imgs)
             
-            g_loss = criterion(fake_validity,torch.ones_like(fake_validity).cuda())
+#             g_loss = criterion(fake_validity,torch.ones_like(fake_validity).cuda())
             
-            if g_loss < min_g_loss:
-                min_g_loss = g_loss
-                g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
-                torch.save(G.state_dict(),g_save_path)
+#             if g_loss < min_g_loss:
+#                 min_g_loss = g_loss
+#                 g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
+#                 torch.save(G.state_dict(),g_save_path)
 
-            g_loss.backward()
-            optimizer_G.step()
+#             g_loss.backward()
+#             optimizer_G.step()
 
-            # d_losses.append(d_loss)
-            # g_losses.append(g_lass)
+#             # d_losses.append(d_loss)
+#             # g_losses.append(g_lass)
             
-            print(f"[Epoch {epoch:{padding_epoch}}/{n_epochs}] "
-                f"[Batch {i:{padding_i}}/{len(train_dataloader)}] "
-                f"[D loss: {d_loss.item():3f}] "
-                f"[G loss: {g_loss.item():3f}]")
+#             print(f"[Epoch {epoch:{padding_epoch}}/{n_epochs}] "
+#                 f"[Batch {i:{padding_i}}/{len(train_dataloader)}] "
+#                 f"[D loss: {d_loss.item():3f}] "
+#                 f"[G loss: {g_loss.item():3f}]")
 
-    if epoch & save_interval == 0:
-        d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
-        torch.save(D.state_dict(),d_save_path)
-        g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
-        torch.save(G.state_dict(),g_save_path)
+#     if epoch & save_interval == 0:
+#         d_save_path = os.path.join(weight_path,'Discriminator',f'D_epoch-{epoch}-{d_loss:4f}.pth')
+#         torch.save(D.state_dict(),d_save_path)
+#         g_save_path = os.path.join(weight_path,'Generator',f'G_epoch-{epoch}-loss{g_loss:4f}.pth')    
+#         torch.save(G.state_dict(),g_save_path)
 
 
 #izi
-z = torch.randn(64,latent_dim, 1,1).cuda() # 64,100
-fake_imgs = G(z) # 64,1,28,28
-fake_z = E(fake_imgs)
-reconf_imgs = G(fake_z)
+# z = torch.randn(64,latent_dim, 1,1).cuda() # 64,100
+# fake_imgs = G(z) # 64,1,28,28
+# fake_z = E(fake_imgs)
+# reconf_imgs = G(fake_z)
 # utils.imshow_grid(reconf_imgs)
-# G.load_state_dict(torch.load('./runs/Generator/G_epoch-970-loss10.976100.pth'))
-# D.load_state_dict(torch.load('./runs/Discriminator/D_epoch-1010-0.000004.pth'))
+
+G.load_state_dict(torch.load('./runs/Generator/G_epoch-242-loss11.046401.pth'))
+D.load_state_dict(torch.load('./runs/Discriminator/D_epoch-248-0.000006.pth'))
 
 G.eval()
 D.eval()
@@ -193,7 +195,7 @@ for epoch in range(n_epochs):
         e_loss = loss_imgs + kappa * loss_features
         if e_loss < min_loss:
                 min_loss = e_loss
-                encoder_path=os.path.join(weight_path,'Autoencoder',f'E_epoch-{epoch}.pth')
+                encoder_path=os.path.join(weight_path,'Autoencoder',f'_update_min_loss_E_epoch-{epoch}.pth')
                 torch.save(E.state_dict(),encoder_path)   
         
         e_loss.backward()
@@ -205,6 +207,6 @@ for epoch in range(n_epochs):
                     f"[Batch {i:{padding_i}}/{len(train_dataloader)}] "
                     f"[E loss: {e_loss.item():3f}]")
     encoder_path=os.path.join(weight_path,'Autoencoder',f'E_epoch-{epoch}.pth')
-    torch.save(E,encoder_path) 
+    torch.save(E.state_dict(),encoder_path) 
 
 print('train_finish~~~~')
