@@ -40,6 +40,44 @@ class Castring_transform:
 
 
 
+# class Castingloader(Dataset):
+#     def __init__(self, root=Path.db_root_dir('casting'),
+#                 split="train",
+#                 transforms = None):
+#         self.root = root
+#         self.split = split
+#         self.transform = transforms
+#         self.files = {}
+#         # self.n_classes = n_classes
+#         self.jpeg_base = os.path.join(self.root,self.split)
+#         self.annotation_base = os.path.join(self.root,self.split)
+
+#         self.files[split] = recursive_glob(rootdir=self.jpeg_base, suffix= '.jpeg')
+#         if not self.files[split]:
+#             raise Exception("No files for split=[%s] found in %s" % (split, self.json_base))
+
+#         print("Found %d %s files" % (len(self.files[split]), split))
+
+#     def __len__(self):
+#         return len(self.files[self.split])
+
+#     def __getitem__(self, idx):
+#         img_path = self.files[self.split][idx].rstrip()
+#         _img = io.imread(img_path)
+#         _target = np.ones((1,1))
+#         if self.transform:
+#             _img = self.transform(_img)
+
+#         sample ={'image':_img, 'label':_target}
+#         return sample
+    
+#     def generate_batches(self, shuffle=False, drop_last=False, _batch_size = 5):
+#         dataloader = DataLoader(dataset=self, batch_size=_batch_size,
+#                                 shuffle=shuffle, drop_last=drop_last)
+#         for sample in dataloader:
+#             yield sample['image'], sample['label']
+
+
 class Castingloader(Dataset):
     def __init__(self, root=Path.db_root_dir('casting'),
                 split="train",
@@ -51,8 +89,9 @@ class Castingloader(Dataset):
         # self.n_classes = n_classes
         self.jpeg_base = os.path.join(self.root,self.split)
         self.annotation_base = os.path.join(self.root,self.split)
-
+        
         self.files[split] = recursive_glob(rootdir=self.jpeg_base, suffix= '.jpeg')
+        print(self.jpeg_base)
         if not self.files[split]:
             raise Exception("No files for split=[%s] found in %s" % (split, self.json_base))
 
@@ -76,6 +115,7 @@ class Castingloader(Dataset):
                                 shuffle=shuffle, drop_last=drop_last)
         for sample in dataloader:
             yield sample['image'], sample['label']
+
 
 if __name__ == '__main__':
     # composed_transforms_tr = transforms.Compose([
